@@ -1,0 +1,43 @@
+# Pixoraft — Shopify app configuration.
+#
+# client_id and the URLs below are the real Pixoraft values. If you ever run
+# `npm run config:link` (which rewrites this file from the app you pick in the
+# Dev Dashboard), re-apply the [webhooks] block below afterwards — the CLI does
+# not generate the compliance subscription, and without it the mandatory privacy
+# webhooks are unregistered.
+name = "Pixoraft"
+client_id = "93900f49033997a7e8f47ea260cb7160"
+application_url = "https://pixoraft.onkra.online"
+embedded = true
+
+
+[access_scopes]
+scopes = "write_products,write_files"
+
+[access.admin]
+direct_api_mode = "online"
+
+[auth]
+redirect_urls = [
+  "https://pixoraft.onkra.online/auth/callback",
+  "https://pixoraft.onkra.online/auth/shopify/callback",
+  "https://pixoraft.onkra.online/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2026-04"
+
+[[webhooks.subscriptions]]
+topics = [ "app/uninstalled" ]
+compliance_topics = [ "customers/redact", "customers/data_request", "shop/redact" ]
+uri = "https://pixoraft.onkra.online/webhooks/app/uninstalled"
+
+[[webhooks.subscriptions]]
+topics = [ "products/create" ]
+uri = "https://pixoraft.onkra.online/webhooks/products/create"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = false

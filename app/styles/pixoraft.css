@@ -1,0 +1,670 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Pixoraft brand theme — "Magenta Flux"
+
+   Every other image app in this family lives in the green / teal / indigo end
+   of the wheel. This one is deliberately warm-cool magenta: fuchsia → violet
+   on a wine-ink base, with gold reserved for attention and mint for success
+   (both picked far enough from the brand hue that a four-tone tag row is
+   legible at 11px without reading the words).
+
+   The element GEOMETRY is its own signature, and each rule below is chosen to
+   be the opposite of the build this was rebuilt from:
+
+     1. PILLS, NOT SQUARES. Chips, tags, meta labels and the usage meter are
+        fully rounded (999px). The previous build used 6px squared labels and a
+        rotated-diamond bullet; nothing here is a diamond.
+     2. CIRCULAR ICON BADGES WITH A RING. The previous signature was a
+        "squircle" (border-radius: 34% / 34%). Here every icon badge is a true
+        circle carrying an outer ring — the ring is the brand mark.
+     3. ACCENT RAILS RUN VERTICALLY, ON THE LEFT. Metric and figure tiles took
+        a 3px bar across the TOP before; here a 3px gradient rail runs down the
+        left edge, and the hero's emphasis is a soft underline along its BOTTOM
+        rather than a bar down its side.
+     4. TEXTURE IS CONCENTRIC, NOT A DOT GRID. The hero glow is a set of
+        repeating rings bleeding off the right edge.
+     5. THE USAGE METER IS CONTINUOUS. The previous build split the quota into
+        20 discrete segments; this one is a single gradient track with a
+        rounded cap and a diagonal hatch once the quota is spent.
+
+   Monospace is used for every uppercase micro-label (tile labels, meta pills),
+   which is the typographic tell that separates this theme from the rest.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --px-core: #d81b74;        /* magenta — primary brand */
+  --px-core-dk: #ae1259;
+  --px-core-lt: #f35ba0;
+  --px-plum: #8b2fc9;        /* violet — gradient partner */
+  --px-plum-dk: #6b1fa0;
+  --px-ink: #230a1c;         /* wine-black — headings */
+  --px-ink-2: #3d1030;
+  --px-gold: #e8a33d;        /* attention */
+  --px-mint: #12a26b;        /* success — far from the brand hue */
+  --px-rose: #d7342b;        /* critical */
+  --px-soft-1: #fdeaf3;      /* magenta tint */
+  --px-soft-2: #f5ecfd;      /* violet tint */
+  --px-tint: #fef7fb;
+  --px-line: #ecdae5;
+  --px-line-2: #e3c9d8;
+  --px-muted: #7a6472;
+  --px-grad: linear-gradient(118deg, #d81b74 0%, #8b2fc9 100%);
+  --px-grad-dark: linear-gradient(118deg, #ae1259 0%, #6b1fa0 100%);
+  --px-grad-soft: linear-gradient(118deg, #fdeaf3 0%, #f5ecfd 100%);
+  --px-grad-ink: linear-gradient(124deg, #230a1c 0%, #3d1030 48%, #5e1361 100%);
+  --px-grad-bright: linear-gradient(118deg, #ff4f9d 0%, #a855f7 100%);
+  --px-ring: rgba(216, 27, 116, 0.2);
+  --px-radius: 10px;
+  --px-radius-lg: 18px;
+  --px-pill: 999px;
+  --px-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ── Polaris primary buttons ────────────────────────────────────────────── */
+.Polaris-Button--variantPrimary {
+  background: var(--px-grad) !important;
+  border-color: var(--px-plum) !important;
+  border-radius: var(--px-pill) !important;
+  box-shadow: 0 2px 10px rgba(139, 47, 201, 0.26) !important;
+}
+.Polaris-Button--variantPrimary:hover:not(:disabled) {
+  background: var(--px-grad-dark) !important;
+  border-color: var(--px-plum-dk) !important;
+}
+.Polaris-Button--variantPrimary:active:not(:disabled) {
+  background: linear-gradient(118deg, #950f4c 0%, #581a84 100%) !important;
+}
+/* A disabled button must LOOK disabled. The rule above sets the gradient with
+   !important on every primary button, which would otherwise override Polaris's
+   own disabled styling — a button that cannot be clicked would look exactly
+   like one that can, and clicking it would appear to do nothing. */
+.Polaris-Button--variantPrimary:disabled,
+.Polaris-Button--variantPrimary[aria-disabled="true"] {
+  background: #ececec !important;
+  border-color: #ececec !important;
+  color: #8a8a8a !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+.Polaris-Button--variantPrimary:disabled .Polaris-Text--root,
+.Polaris-Button--variantPrimary[aria-disabled="true"] .Polaris-Text--root {
+  color: inherit !important;
+}
+
+/* Secondary buttons pick up the pill shape too, so a row of mixed buttons
+   keeps one silhouette. */
+.Polaris-Button--variantSecondary,
+.Polaris-Button--variantTertiary {
+  border-radius: var(--px-pill) !important;
+}
+
+/* ── Links, focus rings, checkboxes ─────────────────────────────────────── */
+.Polaris-Link { color: var(--px-plum) !important; }
+.Polaris-Link:hover { color: var(--px-core-dk) !important; }
+
+.Polaris-TextField__Input:focus {
+  border-color: var(--px-core) !important;
+  box-shadow: 0 0 0 3px var(--px-ring) !important;
+}
+
+.Polaris-Checkbox__Input:checked + .Polaris-Checkbox__Backdrop {
+  background: var(--px-core) !important;
+  border-color: var(--px-core) !important;
+}
+
+/* ── Hero — ink panel, clipped corner, concentric ring glow ─────────────── */
+.px-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--px-grad-ink);
+  border-radius: var(--px-radius-lg);
+  /* The notched top-right corner is the panel's silhouette signature. */
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%);
+  padding: 32px 36px;
+  margin-bottom: 20px;
+  color: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(35, 10, 28, 0.14),
+    0 22px 48px -24px rgba(94, 19, 97, 0.6);
+}
+/* Emphasis runs along the BOTTOM edge — a soft gradient underline rather than
+   a hard bar down the left. */
+.px-hero::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ff4f9d 0%, #a855f7 54%, rgba(168, 85, 247, 0) 100%);
+}
+/* Concentric rings bleeding off the right edge — texture without a blob of
+   light, and visibly not the dot grid this replaced. */
+.px-hero::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -120px;
+  width: 440px;
+  height: 440px;
+  transform: translateY(-50%);
+  background: repeating-radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.07) 0 1px,
+    rgba(255, 255, 255, 0) 1px 22px
+  );
+  pointer-events: none; /* decorative only — must not block the hero button */
+  z-index: -1;
+}
+.px-hero-copy { max-width: 620px; }
+.px-hero-copy h1 {
+  font-size: 29px;
+  line-height: 1.18;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0 0 10px 0;
+  color: #ffffff;
+}
+.px-hero-copy p {
+  font-size: 14px;
+  line-height: 1.58;
+  color: rgba(250, 232, 243, 0.82);
+  margin: 0;
+}
+/* Wordmark tag — a monospace pill with a leading dot, not a bracketed label
+   with a diamond. */
+.px-hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  font-family: var(--px-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffc2de;
+  background: rgba(216, 27, 116, 0.18);
+  border: 1px solid rgba(255, 79, 157, 0.34);
+  border-radius: var(--px-pill);
+  padding: 5px 13px;
+  margin: 0;
+}
+.px-hero-tag::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff4f9d;
+  box-shadow: 0 0 0 3px rgba(255, 79, 157, 0.24);
+}
+/* The hero is ink, so the bright gradient button reads clearly against it. */
+.px-hero .Polaris-Button--variantPrimary {
+  background: var(--px-grad-bright) !important;
+  border-color: #ff4f9d !important;
+  color: #2b0618 !important;
+  box-shadow: 0 8px 22px -8px rgba(255, 79, 157, 0.66) !important;
+}
+.px-hero .Polaris-Button--variantPrimary:hover:not(:disabled) {
+  background: linear-gradient(118deg, #ff79b5 0%, #bd7bfb 100%) !important;
+  border-color: #ff79b5 !important;
+  color: #2b0618 !important;
+}
+.px-hero .Polaris-Button--variantPrimary:active:not(:disabled) {
+  background: var(--px-core) !important;
+  color: #ffffff !important;
+}
+.px-hero .Polaris-Button--variantPrimary .Polaris-Text--root { color: inherit !important; }
+
+/* ── Metric cards — left gradient rail + numeral watermark ─────────────── */
+.px-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .px-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.px-metric {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid var(--px-line);
+  border-radius: var(--px-radius);
+  /* Extra left padding makes room for the rail. */
+  padding: 16px 18px 15px 21px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  box-shadow: 0 1px 2px rgba(35, 10, 28, 0.04);
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+/* Vertical rail down the LEFT edge. */
+.px-metric::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--px-grad);
+}
+/* A faint ring watermark in the corner, so a tile is never a bare rectangle. */
+.px-metric::after {
+  content: "";
+  position: absolute;
+  top: -46px;
+  right: -46px;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 14px solid var(--px-soft-1);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.px-metric:hover {
+  transform: translateY(-2px);
+  border-color: var(--px-line-2);
+  box-shadow: 0 10px 26px -14px rgba(139, 47, 201, 0.42);
+}
+.px-metric-label {
+  position: relative;
+  z-index: 1;
+  font-family: var(--px-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--px-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* A fixed figure height keeps numbers and pills on one baseline across tiles. */
+.px-metric-value,
+.px-metric-pill {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  max-width: 100%;
+}
+.px-metric-value {
+  font-size: 27px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--px-ink);
+  margin: 0;
+}
+/* Text-valued metrics read as a status pill, not a broken headline. */
+.px-metric-pill {
+  box-sizing: border-box;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0 13px;
+  border-radius: var(--px-pill);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.px-metric-pill--brand     { background: var(--px-soft-1); color: #96124f; border: 1px solid #f3c5dc; }
+.px-metric-pill--success   { background: #e6f7ef; color: #0b6b46; border: 1px solid #c4e9d7; }
+.px-metric-pill--attention { background: #fdf3e2; color: #7d5205; border: 1px solid #f2dfb6; }
+.px-metric-pill--subdued   { background: #f6f2f5; color: #5d4b57; border: 1px solid #eae1e7; }
+
+/* ── Continuous usage meter ────────────────────────────────────────────── */
+.px-meter {
+  position: relative;
+  height: 10px;
+  width: 100%;
+  border-radius: var(--px-pill);
+  background: #f2e8ee;
+  overflow: hidden;
+}
+.px-meter-fill {
+  height: 100%;
+  border-radius: var(--px-pill);
+  background: var(--px-grad);
+  transition: width 0.3s ease, background 0.25s ease;
+  /* min-width so any usage at all is visible rather than a hairline. */
+  min-width: 6px;
+}
+/* Spent quota: red plus a diagonal hatch, so it reads as "stop" even in
+   greyscale or for a red-green colour deficiency. */
+.px-meter.is-critical .px-meter-fill {
+  background-image: linear-gradient(
+    135deg,
+    #d7342b 0 6px,
+    #b0261f 6px 12px
+  );
+}
+
+/* ── Tool tiles — 2-up grid with circular ring icon + pill chips ───────── */
+.px-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1000px) {
+  .px-tools { grid-template-columns: minmax(0, 1fr); }
+}
+.px-tool {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid var(--px-line);
+  border-radius: var(--px-radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+}
+/* A gradient underline that grows in on hover — the tile's only motion. */
+.px-tool::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: var(--px-grad);
+  transition: width 0.26s ease;
+}
+.px-tool:hover {
+  border-color: var(--px-line-2);
+  box-shadow: 0 14px 32px -18px rgba(139, 47, 201, 0.46);
+  transform: translateY(-2px);
+}
+.px-tool:hover::after { width: 100%; }
+/* Locked tiles read as unavailable without going fully grey. */
+.px-tool.is-locked { background: var(--px-tint); }
+.px-tool.is-locked:hover::after { width: 0; }
+.px-tool-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+/* Circular icon badge with an outer ring — the shape signature of this theme. */
+.px-tool-icon {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--px-grad-soft);
+  border: 1px solid #f0cfe6;
+  box-shadow: 0 0 0 4px rgba(216, 27, 116, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--px-core-dk);
+}
+/* Two-letter monospace code instead of a glyph. Smaller and letter-spaced so
+   the pair sits centred in the circle rather than filling it. */
+.px-tool-icon--code {
+  font-family: var(--px-mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+.px-tool.is-locked .px-tool-icon {
+  background: #f4eff2;
+  border-color: #e8dfe5;
+  box-shadow: none;
+  filter: grayscale(0.4);
+}
+.px-tool-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--px-ink);
+  margin: 0;
+}
+.px-tool-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--px-muted);
+  margin: 0;
+  flex: 1 1 auto;
+}
+.px-tool-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+}
+.px-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--px-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 11px;
+  border-radius: var(--px-pill);
+  white-space: nowrap;
+}
+/* A leading dot carries the state, so the chips differ by more than hue. */
+.px-tool-chip::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.px-tool-chip--on        { background: var(--px-soft-1); color: #96124f; border: 1px solid #f3c5dc; }
+.px-tool-chip--off       { background: #f6f2f5; color: #5d4b57; border: 1px solid #eae1e7; }
+.px-tool-chip--attention { background: #fdf3e2; color: #7d5205; border: 1px solid #f2dfb6; }
+
+/* ── Page topbar — white card, left rail, circular ring badge ──────────── */
+.px-topbar {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid var(--px-line);
+  border-radius: var(--px-radius);
+  padding: 14px 18px 14px 21px;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 2px rgba(35, 10, 28, 0.04);
+}
+/* Left rail instead of the tinted left-to-right band this replaced. */
+.px-topbar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--px-grad);
+}
+.px-topbar-badge {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--px-grad);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  line-height: 1;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(216, 27, 116, 0.1);
+}
+/* Same two-letter monospace treatment as the tool tiles, so page badges and
+   tile badges read as one family. */
+.px-topbar-badge--code {
+  font-family: var(--px-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.px-topbar-text { min-width: 0; }
+.px-topbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--px-ink);
+  margin: 0;
+}
+.px-topbar-sub {
+  font-size: 12px;
+  color: var(--px-muted);
+  margin: 3px 0 0 0;
+}
+.px-topbar-meta {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--px-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--px-core-dk);
+  background: var(--px-soft-1);
+  border: 1px solid #f3c5dc;
+  border-radius: var(--px-pill);
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+.px-topbar-meta::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--px-core);
+}
+@media (max-width: 640px) {
+  .px-topbar-meta { display: none; }
+}
+
+/* ── Stat row used on the optimizer / analytics pages ─────────────────── */
+.px-figure {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid var(--px-line);
+  border-radius: var(--px-radius);
+  padding: 16px 18px 16px 21px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-width: 0;
+  box-shadow: 0 1px 2px rgba(35, 10, 28, 0.04);
+}
+.px-figure::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--px-grad);
+  opacity: 0.55;
+}
+.px-figure-label {
+  font-family: var(--px-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--px-muted);
+  margin: 0;
+}
+.px-figure-value {
+  font-size: 25px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--px-ink);
+  margin: 0;
+}
+.px-figure-value--alert { color: #b3251d; }
+.px-figure-value--good { color: #0b6b46; }
+/* An alert/good figure recolours its rail too, so the tone is visible from the
+   edge of the tile rather than only in the numeral. */
+.px-figure:has(.px-figure-value--alert)::before { background: var(--px-rose); opacity: 1; }
+.px-figure:has(.px-figure-value--good)::before { background: var(--px-mint); opacity: 1; }
+.px-figure-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .px-figure-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.px-figure-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) {
+  .px-figure-grid--three { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Image run tiles ──────────────────────────────────────────────────── */
+.px-shot {
+  padding: 3px;
+  border-radius: 12px;
+  border: 2px solid var(--px-line);
+  background: #ffffff;
+  line-height: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.px-shot--working { border-color: var(--px-core); box-shadow: 0 0 0 3px var(--px-ring); }
+.px-shot--done { border-color: var(--px-mint); }
+.px-shot--failed { border-color: var(--px-rose); }
+.px-shot--skipped { border-color: #d9c9d3; }
+
+/* ── Numbered step badge (Help page) ──────────────────────────────────── */
+.px-step {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--px-grad);
+  box-shadow: 0 0 0 4px rgba(216, 27, 116, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--px-mono);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: #ffffff;
+}
+
+/* ── Section heading with a leading gradient tick ──────────────────────── */
+.px-section-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.px-section-head::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 3px;
+  height: 15px;
+  border-radius: var(--px-pill);
+  background: var(--px-grad);
+}
