@@ -55,7 +55,7 @@ export default function App() {
           <li>
             <strong>Background whitening</strong>
             <span>
-              Lift near-white studio backgrounds to pure #FFFFFF so product photos
+              Clean up studio backdrops — gradients, shadows and all — to pure #FFFFFF so product photos
               sit seamlessly on any page — image order preserved, originals replaced
               safely.
             </span>

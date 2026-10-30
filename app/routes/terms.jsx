@@ -23,7 +23,7 @@ export default function Terms() {
       <h2>1. What the app does</h2>
       <p>
         The app bulk-edits the images on your Shopify products: it standardizes them on a
-        uniform canvas, whitens near-white backgrounds, resizes oversized files, and
+        uniform canvas, cleans up studio backdrops to white, resizes oversized files, and
         overlays watermarks and promotional badges you design inside the app. Features
         available to you depend on your plan.
       </p>

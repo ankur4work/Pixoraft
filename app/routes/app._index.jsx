@@ -90,7 +90,7 @@ export default function Index() {
     {
       code: "BW",
       title: "Background whitening",
-      desc: "Lift near-white studio backgrounds to pure #FFFFFF so product photos sit cleanly on any page.",
+      desc: "Clean up studio backdrops — gradients, shadows and all — to pure #FFFFFF so product photos sit cleanly on any page.",
       cta: plan.whiten ? "Open studio" : "Upgrade to Starter",
       onClick: () => navigate(plan.whiten ? "/app/mediastudio" : "/app/billing"),
       available: plan.whiten,

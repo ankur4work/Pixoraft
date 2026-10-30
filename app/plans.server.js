@@ -15,7 +15,7 @@
 // Feature flags used for gating. Every flag maps to a studio capability:
 //   canvas        — pad/crop images to a uniform aspect ratio on a background
 //   resize        — cap images at a maximum pixel dimension
-//   whiten        — lift near-white studio backgrounds to pure #FFFFFF
+//   whiten        — clean up a studio backdrop (gradient or uneven) to pure #FFFFFF
 //   watermarkText — text watermark overlay
 //   watermarkLogo — logo (uploaded image) watermark overlay
 //   badge         — promo badge overlay (SALE / NEW / custom)

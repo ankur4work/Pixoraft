@@ -118,7 +118,7 @@ function textWatermarkOverlay(text, W, settings) {
   const opacity = Math.min(1, Math.max(0.05, settings.watermarkOpacity / 100));
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
     <text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle"
-      font-family="Arial, Helvetica, sans-serif" font-weight="700"
+      font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-weight="700"
       font-size="${fontSize}" fill="#FFFFFF" fill-opacity="${opacity}"
       stroke="#000000" stroke-opacity="${opacity * 0.35}" stroke-width="1"
       >${escapeXml(clean)}</text>
@@ -164,7 +164,7 @@ function badgeOverlay(W, settings) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
     <rect x="0" y="0" width="${w}" height="${h}" rx="${Math.round(h / 2)}" fill="${color}"/>
     <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle"
-      font-family="Arial, Helvetica, sans-serif" font-weight="800"
+      font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-weight="800"
       font-size="${fontSize}" fill="#FFFFFF" letter-spacing="1"
       >${escapeXml(text)}</text>
   </svg>`;
@@ -175,26 +175,80 @@ function badgeOverlay(W, settings) {
 /*  Pixel ops                                                                 */
 /* -------------------------------------------------------------------------- */
 
-// Background whitening on a raw RGBA buffer, in place:
-//  1. flatten transparency onto white,
-//  2. smoothly lift near-white pixels to pure #FFFFFF — a ramp, not a hard
-//     threshold, so product edges don't get a jagged cut-out halo.
-function whitenRaw(data) {
-  const LO = 225; // pixels whose darkest channel is above this start lifting
-  const RANGE = 255 - LO;
-  for (let i = 0; i < data.length; i += 4) {
-    const a = data[i + 3] / 255;
-    let r = Math.round(data[i] * a + 255 * (1 - a));
-    let g = Math.round(data[i + 1] * a + 255 * (1 - a));
-    let b = Math.round(data[i + 2] * a + 255 * (1 - a));
-    const m = Math.min(r, g, b);
-    if (m >= LO) {
-      const t = (m - LO) / RANGE;
-      r = Math.round(r + (255 - r) * t);
-      g = Math.round(g + (255 - g) * t);
-      b = Math.round(b + (255 - b) * t);
+const lerp3 = (a, b, t) => [
+  a[0] + (b[0] - a[0]) * t,
+  a[1] + (b[1] - a[1]) * t,
+  a[2] + (b[2] - a[2]) * t,
+];
+const colorDist = (a, b) => {
+  const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
+  return Math.sqrt(dr * dr + dg * dg + db * db);
+};
+
+// Average a small patch in one corner of a flattened (opaque) RGBA buffer —
+// the background color sample for that corner.
+function sampleCorner(data, width, height, x0, y0, dx, dy, patch) {
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let j = 0; j < patch; j++) {
+    const y = y0 + dy * j;
+    if (y < 0 || y >= height) continue;
+    for (let i = 0; i < patch; i++) {
+      const x = x0 + dx * i;
+      if (x < 0 || x >= width) continue;
+      const idx = (y * width + x) * 4;
+      r += data[idx]; g += data[idx + 1]; b += data[idx + 2]; n++;
     }
-    data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = 255;
+  }
+  return n > 0 ? [r / n, g / n, b / n] : [255, 255, 255];
+}
+
+// Background cleanup on a raw RGBA buffer, in place.
+//
+// A flat "lift pixels that are already near-white" rule does nothing on a
+// real studio shot, where the backdrop is routinely a grey-to-near-black
+// gradient from vignetting and shadow falloff rather than a flat white —
+// exactly the kind of photo this op exists to clean up. There is no
+// foreground/background segmentation here (that needs a matting model this
+// app doesn't ship), so instead the four corners are sampled as the
+// background reference and bilinearly interpolated across the frame; any
+// pixel close to its local expected background color is lifted to white,
+// with a feathered falloff so the product's edge doesn't get a hard cutout
+// halo. This assumes a product centered against a backdrop that reaches the
+// corners, which is the standard e-commerce studio-shot composition.
+function whitenRaw(data, width, height) {
+  const patch = Math.max(4, Math.round(Math.min(width, height) * 0.03));
+  const TL = sampleCorner(data, width, height, 0, 0, 1, 1, patch);
+  const TR = sampleCorner(data, width, height, width - 1, 0, -1, 1, patch);
+  const BL = sampleCorner(data, width, height, 0, height - 1, 1, -1, patch);
+  const BR = sampleCorner(data, width, height, width - 1, height - 1, -1, -1, patch);
+
+  const TOLERANCE = 42; // color distance within which a pixel counts as background
+  const FEATHER = 30; // extra distance over which the lift fades out smoothly
+
+  for (let y = 0; y < height; y++) {
+    const v = height > 1 ? y / (height - 1) : 0;
+    for (let x = 0; x < width; x++) {
+      const u = width > 1 ? x / (width - 1) : 0;
+      const topC = lerp3(TL, TR, u);
+      const botC = lerp3(BL, BR, u);
+      const expected = lerp3(topC, botC, v);
+
+      const idx = (y * width + x) * 4;
+      const a = data[idx + 3] / 255;
+      const r = data[idx] * a + 255 * (1 - a);
+      const g = data[idx + 1] * a + 255 * (1 - a);
+      const b = data[idx + 2] * a + 255 * (1 - a);
+
+      const dist = colorDist([r, g, b], expected);
+      let t = 0;
+      if (dist <= TOLERANCE) t = 1;
+      else if (dist <= TOLERANCE + FEATHER) t = 1 - (dist - TOLERANCE) / FEATHER;
+
+      data[idx] = Math.round(r + (255 - r) * t);
+      data[idx + 1] = Math.round(g + (255 - g) * t);
+      data[idx + 2] = Math.round(b + (255 - b) * t);
+      data[idx + 3] = 255;
+    }
   }
 }
 
@@ -234,7 +288,7 @@ export async function applyOps(buffer, ops, settings) {
 
   let flattened = false;
   if (ops.whiten) {
-    whitenRaw(data);
+    whitenRaw(data, width, height);
     flattened = true;
     applied.push("whiten");
   }

@@ -1,5 +1,9 @@
 FROM node:20-alpine
-RUN apk add --no-cache openssl curl
+# fontconfig + a real font file are required for sharp/libvips to render the
+# <text> elements in the watermark and badge SVG overlays. Without them the
+# Alpine image has no fonts at all, librsvg silently drops every text node,
+# and a badge renders as a bare colored pill with no label.
+RUN apk add --no-cache openssl curl fontconfig ttf-dejavu && fc-cache -f
 
 EXPOSE 3000
 

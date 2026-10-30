@@ -470,7 +470,7 @@ export default function MediaStudio() {
     {
       key: 'whiten',
       label: 'Whiten background',
-      help: 'Lift near-white studio backgrounds to pure #FFFFFF.',
+      help: 'Clean up a studio backdrop — even a shadowed or gradient one — to pure #FFFFFF.',
       checked: opWhiten, set: setOpWhiten,
       allowed: plan.can.whiten, hint: plan.can.whiten ? null : 'Starter & up',
     },
