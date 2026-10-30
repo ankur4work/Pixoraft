@@ -22,7 +22,7 @@ export const CONTACT_EMAIL = "admin@capturecrews.com";
 
 // Governing law for the Terms. Set to the jurisdiction the company is
 // registered in (e.g. "England and Wales"). Left unset rather than guessed.
-export const GOVERNING_LAW = null;
+export const GOVERNING_LAW = "India";
 
 /* ------------------------------------------------------------------------- */
 
