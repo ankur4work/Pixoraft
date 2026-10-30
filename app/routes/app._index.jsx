@@ -4,7 +4,7 @@ import { authenticate } from "../shopify.server";
 import { getBillingStateCached } from "../billing.server";
 import { getUsage } from "../usage.server";
 import { entitled } from "../plans.server";
-import db from "../db.server";
+import { getBranding } from "../transform.server";
 import {
   Page,
   Layout,
@@ -28,11 +28,13 @@ export const loader = async ({ request }) => {
   }
 
   let usage = { imagesUsed: 0 };
-  let autoOptimize = false;
+  let brandingReady = false;
   try {
     usage = await getUsage(session.shop);
-    const settings = await db.shopSettings.findUnique({ where: { shop: session.shop } });
-    autoOptimize = settings?.autoOptimize ?? false;
+    const branding = await getBranding(session.shop);
+    brandingReady = branding.watermarkMode === "logo"
+      ? Boolean(branding.watermarkLogo)
+      : Boolean(branding.watermarkText);
   } catch { /* usage/settings tables not ready — defaults */ }
 
   return {
@@ -40,18 +42,19 @@ export const loader = async ({ request }) => {
       name: plan?.name || "Free",
       tier: plan?.tier || "free",
       monthlyImages: plan?.monthlyImages ?? 100,
-      altText: entitled(plan, "altText"),
-      pageSpeed: entitled(plan, "pageSpeed"),
-      autoOptimizeAllowed: entitled(plan, "autoOptimize"),
+      whiten: entitled(plan, "whiten"),
+      watermark: entitled(plan, "watermarkText"),
+      badge: entitled(plan, "badge"),
+      bulkEdit: entitled(plan, "bulkEdit"),
     },
     usage,
-    autoOptimize,
+    brandingReady,
   };
 };
 
 export default function Index() {
   const navigate = useNavigate();
-  const { plan, usage, autoOptimize } = useLoaderData();
+  const { plan, usage, brandingReady } = useLoaderData();
 
   const quota = plan.monthlyImages || 0;
   const used = usage?.imagesUsed || 0;
@@ -59,58 +62,50 @@ export default function Index() {
   const pct = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
   const fmt = (n) => Number(n).toLocaleString();
 
-  const autoStatus = !plan.autoOptimizeAllowed
-    ? { label: "Growth & up", tone: "attention" }
-    : autoOptimize
-      ? { label: "On", tone: "success" }
-      : { label: "Off", tone: undefined };
-
   // Tool tiles — a 2-up grid of self-contained cards, each with its own status
   // chip and action, so availability is readable without opening the page. The
   // badge carries a two-letter monospace code rather than a glyph, so it renders
   // identically on every platform instead of depending on font coverage.
   const tools = [
     {
-      code: "IO",
-      title: "Image Optimizer",
-      desc: "Compress & convert product images to WebP — up to 70% smaller, originals replaced safely.",
-      cta: "Open optimizer",
-      onClick: () => navigate("/app/productoptimization"),
+      code: "MS",
+      title: "Media Studio",
+      desc: "Pick an edit recipe — uniform canvas, background whitening, resize, watermark, badge — and run it across whole products.",
+      cta: "Open studio",
+      onClick: () => navigate("/app/mediastudio"),
       available: true,
       chip: { label: "Included", tone: "on" },
     },
     {
-      code: "AI",
-      title: "AI Alt Text",
-      desc: "Generate SEO alt text for every image with AI vision, then bulk-apply in one click.",
-      cta: plan.altText ? "Generate alt text" : "Upgrade to Starter",
-      onClick: () => navigate(plan.altText ? "/app/alttextsuggestions" : "/app/billing"),
-      available: plan.altText,
-      chip: plan.altText
+      code: "BR",
+      title: "Branding",
+      desc: "Design your watermark, promo badge and canvas once — every studio run applies the same settings.",
+      cta: "Set up branding",
+      onClick: () => navigate("/app/branding"),
+      available: true,
+      chip: brandingReady
+        ? { label: "Configured", tone: "on" }
+        : { label: "Not set up", tone: "off" },
+    },
+    {
+      code: "BW",
+      title: "Background whitening",
+      desc: "Lift near-white studio backgrounds to pure #FFFFFF so product photos sit cleanly on any page.",
+      cta: plan.whiten ? "Open studio" : "Upgrade to Starter",
+      onClick: () => navigate(plan.whiten ? "/app/mediastudio" : "/app/billing"),
+      available: plan.whiten,
+      chip: plan.whiten
         ? { label: "Included", tone: "on" }
         : { label: "Starter & up", tone: "attention" },
     },
     {
-      code: "AU",
-      title: "Auto-optimize new products",
-      desc: "Set & forget — every newly created product gets optimized automatically in the background.",
-      cta: plan.autoOptimizeAllowed ? "Manage" : "Upgrade to Growth",
-      onClick: () => navigate(plan.autoOptimizeAllowed ? "/app/productoptimization" : "/app/billing"),
-      available: plan.autoOptimizeAllowed,
-      chip: !plan.autoOptimizeAllowed
-        ? { label: "Growth & up", tone: "attention" }
-        : autoOptimize
-          ? { label: "On", tone: "on" }
-          : { label: "Off", tone: "off" },
-    },
-    {
-      code: "PS",
-      title: "Page Speed Reports",
-      desc: "Track Core Web Vitals (LCP, CLS, TBT) and see before/after gains per product page.",
-      cta: plan.pageSpeed ? "View reports" : "Upgrade to Growth",
-      onClick: () => navigate(plan.pageSpeed ? "/app/pagespeedimpactreports" : "/app/billing"),
-      available: plan.pageSpeed,
-      chip: plan.pageSpeed
+      code: "PB",
+      title: "Promo badges & bulk edits",
+      desc: "Stamp SALE/NEW badges across a collection and run edits over many products in one go.",
+      cta: plan.badge ? "Open studio" : "Upgrade to Growth",
+      onClick: () => navigate(plan.badge ? "/app/mediastudio" : "/app/billing"),
+      available: plan.badge,
+      chip: plan.badge
         ? { label: "Included", tone: "on" }
         : { label: "Growth & up", tone: "attention" },
     },
@@ -120,9 +115,13 @@ export default function Index() {
   // labels like "Growth & up" can't wrap into an overlapping headline.
   const metrics = [
     { label: "Current plan", value: plan.name, pill: "brand" },
-    { label: "Images used", value: fmt(used) },
-    { label: "Images left", value: fmt(remaining) },
-    { label: "Auto-optimize", value: autoStatus.label, pill: autoStatus.tone || "subdued" },
+    { label: "Edits used", value: fmt(used) },
+    { label: "Edits left", value: fmt(remaining) },
+    {
+      label: "Branding",
+      value: brandingReady ? "Ready" : "Not set",
+      pill: brandingReady ? "on" : "subdued",
+    },
   ];
 
   return (
@@ -133,12 +132,12 @@ export default function Index() {
           <BlockStack gap="300">
             <span className="px-hero-tag">Pixoraft</span>
             <div className="px-hero-copy">
-              <h1>Lighter images. Faster storefront.</h1>
-              <p>Compress and convert your catalog, auto-generate SEO alt text, and track the page-speed gains — all from one place.</p>
+              <h1>Consistent, on-brand product photos.</h1>
+              <p>Standardize every image on one canvas, clean up backgrounds, and stamp watermarks and promo badges — across whole collections in one run.</p>
             </div>
           </BlockStack>
-          <Button variant="primary" size="large" onClick={() => navigate("/app/productoptimization")}>
-            Optimize images
+          <Button variant="primary" size="large" onClick={() => navigate("/app/mediastudio")}>
+            Open studio
           </Button>
         </InlineStack>
       </div>
@@ -169,7 +168,7 @@ export default function Index() {
             <BlockStack gap="300">
               <InlineStack align="space-between" blockAlign="center">
                 <div className="px-section-head">
-                  <Text variant="headingSm" as="h2">Monthly image usage</Text>
+                  <Text variant="headingSm" as="h2">Monthly edit usage</Text>
                   <Badge tone={plan.tier === "free" ? undefined : "success"}>{`${plan.name} plan`}</Badge>
                 </div>
                 <InlineStack gap="300" blockAlign="center">
@@ -181,7 +180,7 @@ export default function Index() {
               </InlineStack>
               <UsageMeter used={used} quota={quota} />
               <Text variant="bodySm" as="p" tone="subdued">
-                {`${fmt(used)} of ${fmt(quota)} images this month · ${fmt(remaining)} remaining`}
+                {`${fmt(used)} of ${fmt(quota)} edits this month · ${fmt(remaining)} remaining`}
               </Text>
             </BlockStack>
           </Card>

@@ -15,9 +15,10 @@ export default function Privacy() {
       title="Privacy Policy"
       intro={
         <p>
-          {APP_NAME} is a Shopify app operated by {COMPANY}. It compresses the images on
-          your products, writes alt text for them, and reports what that saved. This page
-          describes exactly what the app reads, what it keeps, and who else sees it.
+          {APP_NAME} is a Shopify app operated by {COMPANY}. It bulk-edits the images on
+          your products — uniform canvases, background whitening, watermarks and promo
+          badges. This page describes exactly what the app reads, what it keeps, and who
+          else sees it.
         </p>
       }
     >
@@ -33,7 +34,7 @@ export default function Privacy() {
         </li>
         <li>
           <strong>write_files</strong> — read and modify files in your store's content
-          library, which is where product image alt text is written.
+          library, which is where edited images are uploaded.
         </li>
       </ul>
       <p>
@@ -56,10 +57,10 @@ export default function Privacy() {
 
       <div className={s.note}>
         <p>
-          <strong>We never store your images.</strong> During optimization an image is
-          downloaded into memory, re-encoded, uploaded back to Shopify and discarded. No
-          copy is written to disk and no copy is retained. The only thing kept about an
-          image is how many bytes it was.
+          <strong>We never store your product images.</strong> During an edit an image is
+          downloaded into memory, edited, uploaded back to Shopify and discarded. No copy
+          is written to disk and no copy is retained. The one image the app does keep is
+          the watermark logo you upload on the Branding page, because runs need it.
         </p>
         <p>
           <strong>We store no customer data.</strong> The app has no access to your
@@ -69,27 +70,17 @@ export default function Privacy() {
       </div>
 
       <h2>What the app changes in your store</h2>
-      <p>When you run an optimization, the app acts on your behalf to:</p>
+      <p>When you run an edit, the app acts on your behalf to:</p>
       <ul>
         <li>
-          Upload a compressed WebP copy of an image, attach it to the product, and{" "}
+          Upload the edited copy of an image, attach it to the product, and{" "}
           <strong>delete the original image</strong> from that product.
         </li>
         <li>Restore the image order you had before the run.</li>
-        <li>
-          Write alt text on images that have none, when your plan includes that feature.
-        </li>
-        <li>
-          Save a record of the result on the product as metafields in the{" "}
-          <code>image_optimization</code> namespace — the before and after file size, the
-          compression achieved and when it ran. This is what the analytics and reports are
-          calculated from.
-        </li>
+        <li>Keep each image's existing alt text on the edited copy.</li>
       </ul>
       <p>
-        Nothing happens to a product until you select it and start a run, with one
-        exception: if you switch on auto-optimize, products you create from that point on
-        are optimized in the background on the same terms.
+        Nothing happens to a product until you select it and start a run.
       </p>
 
       <h2>Who else receives data</h2>
@@ -116,22 +107,18 @@ export default function Privacy() {
         </li>
         <li>
           <strong>If Shopify sends a shop erasure request</strong>, the app additionally
-          deletes your usage counter and your saved settings.
+          deletes your usage counter, your branding settings and your edit history.
         </li>
         <li>
           <strong>Customer data requests and erasure requests</strong> are acknowledged,
           and there is nothing to act on, because the app holds no customer records.
         </li>
-        <li>
-          The image size cache holds a public CDN URL and a byte count, with no link to a
-          shop or a person.
-        </li>
       </ul>
       <div className={s.warn}>
         <p>
-          Optimized images and the metafields describing them stay on your store after you
-          uninstall. They are your store's own content, and deleting them would remove the
-          images your products are using. If you want them gone, remove them in Shopify.
+          Edited images stay on your store after you uninstall. They are your store's own
+          content, and deleting them would remove the images your products are using. If
+          you want them gone, remove them in Shopify.
         </p>
       </div>
 

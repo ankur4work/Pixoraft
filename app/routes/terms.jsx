@@ -22,20 +22,20 @@ export default function Terms() {
     >
       <h2>1. What the app does</h2>
       <p>
-        The app compresses and converts the images on your Shopify products, can generate
-        alt text for them using a third-party AI provider, and reports the resulting file
-        size savings alongside optional live page-speed tests. Features available to you
-        depend on your plan.
+        The app bulk-edits the images on your Shopify products: it standardizes them on a
+        uniform canvas, whitens near-white backgrounds, resizes oversized files, and
+        overlays watermarks and promotional badges you design inside the app. Features
+        available to you depend on your plan.
       </p>
 
       <h2>2. Image replacement — read this one</h2>
       <div className={s.warn}>
         <p>
-          <strong>Optimization replaces your images and deletes the originals.</strong> For
-          each image the app uploads a compressed copy, attaches it to the product, and
-          removes the file it replaced. This is how your storefront ends up serving the
-          smaller file — but it means the original is gone from that product, and its CDN
-          URL changes.
+          <strong>Edits replace your images and delete the originals.</strong> For each
+          image the app uploads the edited copy, attaches it to the product, and removes
+          the file it replaced. This is how your storefront ends up showing the new
+          version — but it means the original is gone from that product, and its CDN URL
+          changes.
         </p>
         <p>
           You are responsible for keeping your own copies of any images you need to retain.
@@ -43,11 +43,9 @@ export default function Terms() {
         </p>
       </div>
       <p>
-        The app will not re-encode an image where doing so would save almost nothing; those
-        are recorded as already optimal and left untouched. Image order is restored after a
-        run, but Shopify media operations are not transactional, so a run interrupted
-        part-way can leave a product partially optimized. Re-running is safe and resumes
-        where it stopped.
+        Image order is restored after a run, but Shopify media operations are not
+        transactional, so a run interrupted part-way can leave a product partially edited.
+        Images that were not reached are untouched, and running again is safe.
       </p>
 
       <h2>3. Plans, quotas and billing</h2>
@@ -59,17 +57,16 @@ export default function Terms() {
           transaction.
         </li>
         <li>
-          Each plan includes a monthly allowance of optimized images. The allowance resets
+          Each plan includes a monthly allowance of image edits. The allowance resets
           at the start of each calendar month (UTC).
         </li>
         <li>
-          Only images that are actually re-encoded and replaced count against your
-          allowance. Images that were skipped as already optimal, and images that failed,
-          are not charged against it.
+          Only images that are actually edited and replaced count against your allowance.
+          Images that failed are not charged against it.
         </li>
         <li>
-          When the allowance is used up, optimization stops until the next month or until
-          you move to a larger plan. Prices shown by Shopify at the point of subscribing are
+          When the allowance is used up, editing stops until the next month or until you
+          move to a larger plan. Prices shown by Shopify at the point of subscribing are
           the ones that apply.
         </li>
         <li>
@@ -98,11 +95,9 @@ export default function Terms() {
 
       <h2>5. Third-party services</h2>
       <p>
-        The app depends on Shopify, and on AI and page-speed providers described in the{" "}
-        <a href="/privacy">Privacy Policy</a>. Their availability, rate limits and output
-        are outside our control. AI-generated alt text is produced by a model and may be
-        inaccurate; review it before relying on it. Page-speed results come from Google and
-        vary with your theme, hosting and page content.
+        The app depends on Shopify, as described in the{" "}
+        <a href="/privacy">Privacy Policy</a>. Shopify's availability, rate limits and API
+        behavior are outside our control.
       </p>
 
       <h2>6. Availability</h2>
@@ -116,9 +111,9 @@ export default function Terms() {
       <p>
         To the fullest extent permitted by law, the app is provided <strong>“as is”</strong>{" "}
         and without warranties of any kind, express or implied, including fitness for a
-        particular purpose and non-infringement. We do not warrant that optimization will
-        produce any particular file size reduction, search ranking, conversion rate or page
-        speed score.
+        particular purpose and non-infringement. We do not warrant that edits will produce
+        any particular visual result, search ranking or conversion rate — review edited
+        images before relying on them.
       </p>
       <p>
         To the fullest extent permitted by law, {COMPANY} is not liable for indirect,
@@ -134,9 +129,9 @@ export default function Terms() {
       <h2>8. Termination</h2>
       <p>
         You may stop using the app at any time by uninstalling it, which ends your access
-        and deletes your session. Optimized images and the records written to your products
-        remain, as described in the <a href="/privacy">Privacy Policy</a>. We may terminate
-        access for breach of these terms.
+        and deletes your session. Edited images remain on your store, as described in the{" "}
+        <a href="/privacy">Privacy Policy</a>. We may terminate access for breach of these
+        terms.
       </p>
 
       <h2>9. Changes to these terms</h2>

@@ -24,16 +24,13 @@ import UsageMeter from "../components/UsageMeter";
 
 // Human labels for the entitlement flags, shown as the current plan's inclusions.
 const FEATURE_LABELS = {
-  optimize: "Image optimization & WebP conversion",
-  altText: "AI alt text",
-  filenameSeo: "SEO filenames",
-  resize: "Resize & crop",
-  scheduling: "Scheduled runs",
-  watermark: "Watermarking",
-  heic: "HEIC support",
-  autoOptimize: "Auto-optimize new products",
-  pageSpeed: "Page Speed reports",
-  bulkExport: "Bulk image export",
+  canvas: "Uniform canvas & aspect ratios",
+  resize: "Resize to a max dimension",
+  whiten: "Background whitening",
+  watermarkText: "Text watermarks",
+  watermarkLogo: "Logo watermarks",
+  badge: "Promo badges",
+  bulkEdit: "Bulk edits across products",
   priority: "Priority processing",
 };
 
@@ -142,7 +139,7 @@ export default function BillingPage() {
                       : <Badge>Current</Badge>}
                   </InlineStack>
                   <Text variant="bodySm" as="p" tone="subdued">
-                    {`Up to ${fmt(quota)} optimized images per month`}
+                    {`Up to ${fmt(quota)} image edits per month`}
                   </Text>
                 </BlockStack>
                 <InlineStack gap="300">
@@ -159,7 +156,7 @@ export default function BillingPage() {
 
               <BlockStack gap="200">
                 <InlineStack align="space-between" blockAlign="center">
-                  <Text variant="bodySm" as="p" tone="subdued">Images this month</Text>
+                  <Text variant="bodySm" as="p" tone="subdued">Edits this month</Text>
                   <Text variant="bodySm" as="p" tone={pct >= 100 ? "critical" : "subdued"}>
                     {`${fmt(used)} / ${fmt(quota)}`}
                   </Text>

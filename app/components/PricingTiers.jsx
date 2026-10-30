@@ -28,8 +28,8 @@ export default function PricingTiers({ pricingUrl }) {
           <span style={s.tag}>Pixoraft</span>
           <h1 style={s.heading}>Pricing that scales with your catalog.</h1>
           <p style={s.subheading}>
-            Compress images, lift your page speed, and rank higher — start free and
-            move up whenever your catalog does.
+            Uniform canvases, clean backgrounds, watermarks and badges — start free
+            and move up whenever your catalog does.
           </p>
         </header>
 
@@ -50,7 +50,7 @@ export default function PricingTiers({ pricingUrl }) {
 
                   <div style={s.quotaBox(hot)}>
                     <span style={s.quotaNum}>{tier.images}</span>
-                    <span style={s.quotaUnit}>images / month</span>
+                    <span style={s.quotaUnit}>edits / month</span>
                   </div>
 
                   <div style={s.featureList}>

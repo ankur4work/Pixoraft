@@ -27,7 +27,7 @@ model Session {
   refreshTokenExpires  DateTime?
 }
 
-// Per-shop, per-month image optimization counter used to enforce plan quotas.
+// Per-shop, per-month edited-image counter used to enforce plan quotas.
 // `period` is "YYYY-MM"; a new row is created each month so usage resets.
 model UsageCounter {
   id         String @id @default(cuid())
@@ -38,23 +38,37 @@ model UsageCounter {
   @@unique([shop, period])
 }
 
-// Per-shop app settings. `autoOptimize` toggles background optimization of newly
-// created products (a Growth+ feature, also gated by entitlement at runtime).
+// Per-shop branding settings used by the studio's watermark/badge/canvas ops.
+// The logo is stored inline as a data URI; uploads are capped small (≤500 KB)
+// so a TEXT column is fine and no file storage is needed.
 model ShopSettings {
-  shop         String  @id
-  autoOptimize Boolean @default(false)
+  shop              String  @id
+  watermarkMode     String  @default("text") // "text" | "logo"
+  watermarkText     String  @default("")
+  watermarkLogo     String? // data: URI (png/jpeg/webp), small
+  watermarkPosition String  @default("southeast") // 9-grid gravity
+  watermarkOpacity  Int     @default(55) // percent
+  watermarkScale    Int     @default(22) // percent of image width
+  badgeText         String  @default("SALE")
+  badgeColor        String  @default("#D7263D")
+  badgePosition     String  @default("northwest")
+  canvasRatio       String  @default("1:1") // "1:1" | "4:5" | "3:4" | "16:9"
+  canvasColor       String  @default("#FFFFFF")
 }
 
-// Measured byte size of a Shopify CDN image, keyed by its URL.
-//
-// The product list has to show a real "Original Size" per product, which meant a
-// HEAD request per image on every single page load — thousands of round trips
-// for a mid-size catalog. Shopify CDN urls carry a ?v=<version> that changes
-// whenever the file changes, so the url is a safe content key: a cached entry
-// can never describe different bytes than the ones it was measured from, and
-// stale rows are simply never read again.
-model ImageSize {
-  url       String   @id
-  bytes     Int
-  createdAt DateTime @default(now())
+// One row per image edit the studio performed — the source for the History
+// page and the per-product "edits" counts on the studio catalog. `ops` is a
+// JSON array of operation names (e.g. ["canvas","watermark"]).
+model StudioEdit {
+  id           String   @id @default(cuid())
+  shop         String
+  productId    String
+  productTitle String   @default("")
+  imageId      String
+  newImageId   String
+  ops          String
+  createdAt    DateTime @default(now())
+
+  @@index([shop, createdAt])
+  @@index([shop, productId])
 }

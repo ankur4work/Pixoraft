@@ -14,9 +14,9 @@ export const PLAN_TIERS = [
     images: "100",
     tagline: "Try it out",
     features: [
-      "100 images / month",
-      "WebP conversion & compression",
-      "Restore originals",
+      "100 image edits / month",
+      "Uniform canvas & aspect ratios",
+      "Resize to a max dimension",
     ],
   },
   {
@@ -26,12 +26,10 @@ export const PLAN_TIERS = [
     images: "2,000",
     tagline: "For growing stores",
     features: [
-      "2,000 images / month",
+      "2,000 image edits / month",
       "Everything in Free",
-      "AI alt text",
-      "SEO filenames",
-      "Resize & crop",
-      "Scheduled runs",
+      "Background whitening",
+      "Text watermarks",
     ],
   },
   {
@@ -42,11 +40,11 @@ export const PLAN_TIERS = [
     tagline: "Most popular",
     popular: true,
     features: [
-      "15,000 images / month",
+      "15,000 image edits / month",
       "Everything in Starter",
-      "Auto-optimize new products",
-      "Watermarking & HEIC",
-      "Page Speed reports",
+      "Logo watermarks",
+      "Promo badges (SALE / NEW / custom)",
+      "Bulk edits across many products",
     ],
   },
   {
@@ -56,9 +54,8 @@ export const PLAN_TIERS = [
     images: "50,000",
     tagline: "High volume",
     features: [
-      "50,000 images / month",
+      "50,000 image edits / month",
       "Everything in Growth",
-      "Bulk image export",
       "Priority processing",
     ],
   },

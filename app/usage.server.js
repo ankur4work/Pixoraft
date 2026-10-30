@@ -39,7 +39,7 @@ export async function incrementUsage(shop, n) {
   return row.imagesUsed;
 }
 
-// Images this shop may still optimize this month under `plan` (>= 0).
+// Images this shop may still edit this month under `plan` (>= 0).
 export async function getRemaining(shop, plan) {
   const quota = (plan || FREE_PLAN).monthlyImages;
   const { imagesUsed } = await getUsage(shop);
@@ -49,13 +49,13 @@ export async function getRemaining(shop, plan) {
 // Claim one image's worth of quota BEFORE doing the work, atomically.
 //
 // getRemaining() then incrementUsage() is only safe while one unit of work is in
-// flight at a time. Now that the browser optimizes several images at once, each
-// request could read the same "1 remaining" and all proceed past the quota.
+// flight at a time. The browser edits several images at once, so each request
+// could read the same "1 remaining" and all proceed past the quota.
 // Incrementing first and refunding when the result overshoots moves the
 // decision into the database, where it can't race.
 //
-// Callers MUST refund what they reserve but don't use — an image that turns out
-// not to be worth recompressing costs the merchant nothing.
+// Callers MUST refund what they reserve but don't use — an image whose edit
+// fails costs the merchant nothing.
 export async function reserveImages(shop, plan, n = 1) {
   const quota = (plan || FREE_PLAN).monthlyImages;
   const period = currentPeriod();

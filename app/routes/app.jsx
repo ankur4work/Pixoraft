@@ -8,7 +8,6 @@ import {
   getBillingStateCached,
   managedPricingUrl,
 } from "../billing.server";
-import { entitled } from "../plans.server";
 import PricingTiers from "../components/PricingTiers";
 
 import "@shopify/polaris/build/esm/styles.css";
@@ -23,7 +22,6 @@ export const loader = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
 
   let hasActivePlan = false;
-  let features = { pageSpeed: false, altText: false };
   // The pricing-wall CTA is a direct top-frame link to Shopify's managed-pricing
   // page, so the URL must be available even when no plan is active (that's when
   // the wall shows). Default to the fallback app handle; refined below.
@@ -34,11 +32,6 @@ export const loader = async ({ request }) => {
     // a fresh subscribe still unlocks instantly since negatives aren't cached.
     const state = await getBillingStateCached(admin, session.shop);
     hasActivePlan = state.hasActivePlan;
-    // Entitlement booleans drive which nav items render (Page Speed, Alt Text).
-    features = {
-      pageSpeed: entitled(state.plan, "pageSpeed"),
-      altText: entitled(state.plan, "altText"),
-    };
     pricingUrl = managedPricingUrl(session.shop, state.appHandle);
   } catch (e) {
     // Propagate redirect Responses (e.g. OAuth flow initiated by the library),
@@ -63,13 +56,12 @@ export const loader = async ({ request }) => {
   return {
     apiKey: process.env.SHOPIFY_API_KEY || "",
     hasActivePlan,
-    features,
     pricingUrl,
   };
 };
 
 export default function App() {
-  const { apiKey, hasActivePlan, needsReauth, shop, features, pricingUrl } = useLoaderData();
+  const { apiKey, hasActivePlan, needsReauth, shop, pricingUrl } = useLoaderData();
 
   // Expired token: break out of the Shopify iframe so OAuth runs in the top frame
   useEffect(() => {
@@ -87,16 +79,9 @@ export default function App() {
           <>
             <ui-nav-menu>
               <a href="/app" rel="home">Home</a>
-              <a href="/app/productoptimization">Image Optimization</a>
-              {features?.altText && (
-                <a href="/app/alttextsuggestions">Alt Text Generator</a>
-              )}
-              {features?.pageSpeed && (
-                <a href="/app/pagespeedimpactreports">Page Speed Reports</a>
-              )}
-              {/* The analytics route existed but was unreachable — no nav entry
-                  pointed at it, so the only way in was typing the URL. */}
-              <a href="/app/imageoptimizationdashboard">Analytics</a>
+              <a href="/app/mediastudio">Media Studio</a>
+              <a href="/app/branding">Branding</a>
+              <a href="/app/history">History</a>
               <a href="/app/billing">Billing</a>
               <a href="/app/additional">Help</a>
             </ui-nav-menu>

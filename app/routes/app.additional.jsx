@@ -12,47 +12,50 @@ import {
   Badge,
 } from "@shopify/polaris";
 
-// Help & reference page. Replaces the scaffold's "additional page" placeholder,
-// which shipped with template copy about how to add pages to the nav menu.
+// Help & reference page.
 const STEPS = [
   {
     n: "1",
-    title: "Run the optimizer",
-    body: "Open Image Optimization, pick the products you want (or select all), and start a run. Each image is downloaded, re-compressed to WebP and uploaded back to Shopify — the original is removed and your image order is restored at the end.",
+    title: "Set up your branding",
+    body: "Open Branding and design your watermark (text or logo), promo badge, and canvas — aspect ratio and background color. These settings are saved per shop and every studio run uses them, so the look stays consistent.",
   },
   {
     n: "2",
-    title: "Let alt text follow",
-    body: "The optimizer writes AI alt text for images that have none. For a dedicated pass over your whole catalog — one caption per product, applied to all of its images — use the Alt Text Generator.",
+    title: "Pick an edit recipe",
+    body: "In the Media Studio, tick the edits you want: uniform canvas, background whitening, resize, watermark, badge. Edits apply in a fixed order — resize, whiten, canvas, then overlays — so the result is predictable.",
   },
   {
     n: "3",
-    title: "Measure the result",
-    body: "Analytics shows the real before/after file sizes recorded during each run. Page Speed Reports adds a live Lighthouse test against the public product page via Google PageSpeed Insights.",
+    title: "Run it across products",
+    body: "Select one product or many (bulk edits are a Growth feature) and apply. Each image is downloaded, edited and uploaded back to Shopify — the original is removed and your image order is restored at the end.",
   },
   {
     n: "4",
-    title: "Automate it",
-    body: "Turn on auto-optimize and every newly created product is optimized in the background, without opening the app.",
+    title: "Check the history",
+    body: "History lists every edit the studio applied — which product, which operations, and when — so you always know what changed.",
   },
 ];
 
 const FAQ = [
   {
     q: "Are my original images kept?",
-    a: "No — the optimized copy replaces the original on the product, which is what makes your storefront serve the smaller file. Shopify's own file history is the recovery path, so run the optimizer on a product you are happy to update.",
+    a: "No — the edited copy replaces the original on the product, which is what makes your storefront show the new version. Shopify's own file history is the recovery path, so run the studio on a product you are happy to update.",
   },
   {
-    q: "Why was an image skipped?",
-    a: "Images that are already efficiently encoded are left alone. If re-compressing would save only a couple of kilobytes, replacing the file (and invalidating its CDN URL) is not worth a quota credit, so it is recorded as already optimal and never retried.",
+    q: "Does the canvas edit crop my photos?",
+    a: "Never. The canvas pads the image out to the target aspect ratio on your chosen background color — nothing is cut off.",
+  },
+  {
+    q: "Where do the watermark and badge settings come from?",
+    a: "From the Branding page. The studio run and the Branding preview use the same positions and relative sizes, so what you previewed is what gets rendered.",
   },
   {
     q: "What counts against my monthly quota?",
-    a: "Only images that were actually re-encoded and replaced. Skipped and failed images are refunded automatically, so re-running the optimizer is always safe.",
+    a: "Only images that were actually edited and replaced. Failed images are refunded automatically, so re-running the studio is always safe.",
   },
   {
     q: "Can I keep the page closed during a run?",
-    a: "An interactive run is driven by your browser, so keep the tab open until it finishes. Auto-optimize runs server-side and needs nothing open.",
+    a: "A run is driven by your browser, so keep the tab open until it finishes. Up to six images are processed at a time.",
   },
   {
     q: "Does the quota reset?",
@@ -66,7 +69,7 @@ export default function HelpPage() {
   return (
     <Page
       title="Pixoraft — Help"
-      subtitle="How the optimizer works, and answers to the questions merchants ask most"
+      subtitle="How the studio works, and answers to the questions merchants ask most"
     >
       <Layout>
         <Layout.Section>
@@ -74,7 +77,7 @@ export default function HelpPage() {
             <span className="px-topbar-badge px-topbar-badge--code" aria-hidden="true">HQ</span>
             <div className="px-topbar-text">
               <p className="px-topbar-title">Getting started</p>
-              <p className="px-topbar-sub">Four steps from install to a measurably lighter catalog</p>
+              <p className="px-topbar-sub">Four steps from install to a consistent, on-brand catalog</p>
             </div>
             <span className="px-topbar-meta">Guide</span>
           </div>
@@ -124,11 +127,11 @@ export default function HelpPage() {
             <BlockStack gap="300">
               <Text variant="headingSm" as="h2">Jump back in</Text>
               <InlineStack gap="300" wrap>
-                <Button variant="primary" onClick={() => navigate("/app/productoptimization")}>
-                  Open optimizer
+                <Button variant="primary" onClick={() => navigate("/app/mediastudio")}>
+                  Open Media Studio
                 </Button>
-                <Button onClick={() => navigate("/app/imageoptimizationdashboard")}>
-                  View analytics
+                <Button onClick={() => navigate("/app/branding")}>
+                  Branding settings
                 </Button>
                 <Button onClick={() => navigate("/app/billing")}>
                   Manage plan

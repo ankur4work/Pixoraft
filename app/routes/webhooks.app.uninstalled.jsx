@@ -22,8 +22,8 @@ import db from "../db.server";
  *   CUSTOMERS_DATA_REQUEST         -> acknowledge. The app stores no customer
  *   CUSTOMERS_REDACT                  records of any kind — only the shop
  *                                     domain, the Shopify session, a monthly
- *                                     image counter, a per-shop setting and a
- *                                     url -> byte-size cache. There is nothing
+ *                                     edit counter, per-shop branding settings
+ *                                     and an edit-history log. There is nothing
  *                                     about a customer to return or erase.
  *
  * Every branch must still answer 200 quickly: Shopify retries, and then disables,
@@ -44,11 +44,10 @@ export const action = async ({ request }) => {
     await db.session.deleteMany({ where: { shop } });
 
     if (topic === "SHOP_REDACT") {
-      // The shop is being erased, so the rows keyed by its domain go too. The
-      // ImageSize cache is keyed by CDN url rather than shop and holds nothing
-      // but a byte count, so there is nothing shop-identifying to remove there.
+      // The shop is being erased, so the rows keyed by its domain go too.
       await db.usageCounter.deleteMany({ where: { shop } });
       await db.shopSettings.deleteMany({ where: { shop } });
+      await db.studioEdit.deleteMany({ where: { shop } });
     }
   } else {
     // Logged so the acknowledgement is auditable — Shopify requires a response,

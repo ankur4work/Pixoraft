@@ -32,10 +32,6 @@ topics = [ "app/uninstalled" ]
 compliance_topics = [ "customers/redact", "customers/data_request", "shop/redact" ]
 uri = "https://pixoraft.onkra.online/webhooks/app/uninstalled"
 
-[[webhooks.subscriptions]]
-topics = [ "products/create" ]
-uri = "https://pixoraft.onkra.online/webhooks/products/create"
-
 [pos]
 embedded = false
 

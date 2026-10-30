@@ -11,31 +11,27 @@ export const meta = () => [
 const FAQ = [
   {
     q: "Are my original images kept?",
-    a: "No. The optimized copy replaces the original on the product, which is what makes your storefront serve the smaller file. Keep your own copies of anything you need to retain, and run the app on products you are happy to have modified.",
+    a: "No. The edited copy replaces the original on the product, which is what makes your storefront show the new version. Keep your own copies of anything you need to retain, and run the app on products you are happy to have modified.",
   },
   {
-    q: "Why was an image skipped?",
-    a: "It was already efficiently encoded. If re-compressing would save only a couple of kilobytes, replacing the file — and invalidating its CDN URL — is not worth it, so the image is recorded as already optimal and never retried.",
+    q: "Does the canvas edit crop my photos?",
+    a: "Never. The canvas pads the image out to the target aspect ratio on your chosen background color — nothing is cut off.",
+  },
+  {
+    q: "Where do the watermark and badge come from?",
+    a: "From the Branding page inside the app. You design them once — text or logo, position, size, opacity, colors — and every run applies the same settings, so the whole catalog stays consistent.",
   },
   {
     q: "What counts against my monthly allowance?",
-    a: "Only images that were actually re-encoded and replaced. Skipped and failed images are refunded automatically, so re-running the optimizer is always safe.",
+    a: "Only images that were actually edited and replaced. Failed images are refunded automatically, so re-running the studio is always safe.",
   },
   {
     q: "A run stopped part-way. Did I lose anything?",
-    a: "No. Progress is recorded per image, so starting the run again picks up from where it stopped and leaves the finished images alone.",
+    a: "No. Each image either finished (and was replaced) or was left untouched, and your image order is restored at the end of the run either way.",
   },
   {
     q: "Can I close the tab during a run?",
-    a: "An interactive run is driven by your browser, so keep the tab open until it finishes. Auto-optimize runs on the server and needs nothing open.",
-  },
-  {
-    q: "The alt text looks like my product title rather than a description.",
-    a: "That is the fallback the app uses when the AI provider cannot be reached — usually an expired API key or exhausted credits. The app shows a warning when this happens.",
-  },
-  {
-    q: "The live page-speed test will not run.",
-    a: "Google needs to be able to load the page publicly, so it fails on an unpublished or password-protected storefront. It is also rate limited, so a test can fail temporarily and succeed a minute later. Your measured file size savings are unaffected either way.",
+    a: "A run is driven by your browser, so keep the tab open until it finishes. Up to six images are processed at a time.",
   },
   {
     q: "Does the allowance reset?",
@@ -68,13 +64,13 @@ export default function Support() {
       <h2>Before you write in</h2>
       <ul>
         <li>
-          <strong>Check your plan.</strong> Alt text needs Starter or above; auto-optimize
-          and page-speed reports need Growth or above. Locked features show the plan they
-          require on the app's home page.
+          <strong>Check your plan.</strong> Background whitening and text watermarks need
+          Starter or above; logo watermarks, badges and bulk edits need Growth or above.
+          Locked features show the plan they require on the app's home page.
         </li>
         <li>
           <strong>Check your allowance.</strong> The meter on the home page and the
-          optimizer page shows how many images are left this month.
+          studio page shows how many edits are left this month.
         </li>
         <li>
           <strong>Try the run again.</strong> Most failures are transient — a slow image

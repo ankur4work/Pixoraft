@@ -19,10 +19,11 @@ export default function App() {
     <div className={styles.index}>
       <div className={styles.content}>
         <span className={styles.tag}>Pixoraft</span>
-        <h1 className={styles.heading}>Lighter images. Faster storefront.</h1>
+        <h1 className={styles.heading}>Consistent, on-brand product photos.</h1>
         <p className={styles.text}>
-          Image optimization &amp; SEO suite for Shopify. Compress your catalog,
-          generate AI alt text, and measure the page-speed gains.
+          The product media studio for Shopify. Standardize every image on one
+          canvas, clean up backgrounds, and stamp watermarks and promo badges —
+          across whole collections in one run.
         </p>
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">
@@ -38,24 +39,25 @@ export default function App() {
         )}
         <ul className={styles.list}>
           <li>
-            <strong>Smart compression</strong>
+            <strong>Uniform canvases</strong>
             <span>
-              Cut image weight by up to 70% with automatic WebP conversion — originals
-              replaced safely, image order preserved.
+              Pad every image to one aspect ratio — never cropped — so collection
+              grids line up perfectly, with clean white or brand-color backgrounds.
             </span>
           </li>
           <li>
-            <strong>AI alt text</strong>
+            <strong>Watermarks &amp; badges</strong>
             <span>
-              One AI-written caption per product, applied across every image, so your
-              catalog is accessible and search-friendly.
+              Design a text or logo watermark and SALE/NEW promo badges once, then
+              stamp them across whole products and collections in one run.
             </span>
           </li>
           <li>
-            <strong>Measured reporting</strong>
+            <strong>Background whitening</strong>
             <span>
-              Real before/after file sizes plus live Core Web Vitals tests from Google
-              PageSpeed Insights.
+              Lift near-white studio backgrounds to pure #FFFFFF so product photos
+              sit seamlessly on any page — image order preserved, originals replaced
+              safely.
             </span>
           </li>
         </ul>
