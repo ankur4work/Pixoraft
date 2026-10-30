@@ -5,6 +5,7 @@ import {
   listProductImages,
   transformOneImage,
   restoreOrder,
+  revertEdit,
   getBranding,
   MAX_DIM_LIMIT,
 } from '../transform.server';
@@ -87,6 +88,18 @@ export async function action({ request }) {
   const formData = await request.formData();
   const intent = formData.get('intent');
   const productId = formData.get('productId');
+
+  if (intent === 'revert') {
+    const editId = formData.get('editId');
+    if (!editId) return json({ success: false, error: 'No edit was given.' }, 400);
+    try {
+      return json(await revertEdit({ admin, shop: session.shop, editId }));
+    } catch (error) {
+      const detail = error?.graphQLErrors?.[0]?.message || error?.message || 'unknown error';
+      console.error('[api.transform] revert failed:', detail);
+      return json({ success: false, error: detail }, 500);
+    }
+  }
 
   if (!productId) {
     return json({ success: false, error: 'No product was given.' }, 400);

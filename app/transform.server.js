@@ -175,25 +175,19 @@ function badgeOverlay(W, settings) {
 /*  Pixel ops                                                                 */
 /* -------------------------------------------------------------------------- */
 
-const lerp3 = (a, b, t) => [
-  a[0] + (b[0] - a[0]) * t,
-  a[1] + (b[1] - a[1]) * t,
-  a[2] + (b[2] - a[2]) * t,
-];
 const colorDist = (a, b) => {
   const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
   return Math.sqrt(dr * dr + dg * dg + db * db);
 };
 
-// Average a small patch in one corner of a flattened (opaque) RGBA buffer —
-// the background color sample for that corner.
-function sampleCorner(data, width, height, x0, y0, dx, dy, patch) {
+// Average a small patch centered at (cx, cy) in a flattened (opaque) RGBA
+// buffer — one background color sample.
+function samplePatch(data, width, height, cx, cy, patch) {
+  const half = Math.floor(patch / 2);
   let r = 0, g = 0, b = 0, n = 0;
-  for (let j = 0; j < patch; j++) {
-    const y = y0 + dy * j;
+  for (let y = cy - half; y <= cy + half; y++) {
     if (y < 0 || y >= height) continue;
-    for (let i = 0; i < patch; i++) {
-      const x = x0 + dx * i;
+    for (let x = cx - half; x <= cx + half; x++) {
       if (x < 0 || x >= width) continue;
       const idx = (y * width + x) * 4;
       r += data[idx]; g += data[idx + 1]; b += data[idx + 2]; n++;
@@ -205,33 +199,49 @@ function sampleCorner(data, width, height, x0, y0, dx, dy, patch) {
 // Background cleanup on a raw RGBA buffer, in place.
 //
 // A flat "lift pixels that are already near-white" rule does nothing on a
-// real studio shot, where the backdrop is routinely a grey-to-near-black
-// gradient from vignetting and shadow falloff rather than a flat white —
-// exactly the kind of photo this op exists to clean up. There is no
-// foreground/background segmentation here (that needs a matting model this
-// app doesn't ship), so instead the four corners are sampled as the
-// background reference and bilinearly interpolated across the frame; any
-// pixel close to its local expected background color is lifted to white,
-// with a feathered falloff so the product's edge doesn't get a hard cutout
-// halo. This assumes a product centered against a backdrop that reaches the
-// corners, which is the standard e-commerce studio-shot composition.
+// real studio shot, where the backdrop is routinely darkened toward the
+// edges by vignetting/shadow falloff rather than flat white — exactly the
+// kind of photo this op exists to clean up. There is no foreground/
+// background segmentation here (that needs a matting model this app doesn't
+// ship), so instead eight points around the border — the four corners plus
+// the four edge midpoints — are sampled as background references and
+// blended per-pixel by inverse-distance weighting. Plain bilinear-from-four-
+// corners underestimates how dark a radial vignette gets at the edge
+// midpoints (it only "sees" the two adjacent corners there); the extra four
+// samples fix that without needing to know the vignette's shape in advance.
+// Any pixel close to its locally-expected background color is lifted to
+// white, with a feathered falloff so the product's edge doesn't get a hard
+// cutout halo. This assumes a product centered against a backdrop that
+// reaches the border, which is the standard e-commerce studio-shot
+// composition.
 function whitenRaw(data, width, height) {
   const patch = Math.max(4, Math.round(Math.min(width, height) * 0.03));
-  const TL = sampleCorner(data, width, height, 0, 0, 1, 1, patch);
-  const TR = sampleCorner(data, width, height, width - 1, 0, -1, 1, patch);
-  const BL = sampleCorner(data, width, height, 0, height - 1, 1, -1, patch);
-  const BR = sampleCorner(data, width, height, width - 1, height - 1, -1, -1, patch);
+  const mx = width - 1, my = height - 1;
+  const points = [
+    [0, 0], [Math.round(mx / 2), 0], [mx, 0],
+    [0, Math.round(my / 2)], [mx, Math.round(my / 2)],
+    [0, my], [Math.round(mx / 2), my], [mx, my],
+  ];
+  const samples = points.map(([x, y]) => ({
+    x, y, color: samplePatch(data, width, height, x, y, patch),
+  }));
 
   const TOLERANCE = 42; // color distance within which a pixel counts as background
   const FEATHER = 30; // extra distance over which the lift fades out smoothly
+  const EPS = 64; // keeps IDW weights finite exactly at a sample point
 
   for (let y = 0; y < height; y++) {
-    const v = height > 1 ? y / (height - 1) : 0;
     for (let x = 0; x < width; x++) {
-      const u = width > 1 ? x / (width - 1) : 0;
-      const topC = lerp3(TL, TR, u);
-      const botC = lerp3(BL, BR, u);
-      const expected = lerp3(topC, botC, v);
+      let wr = 0, wg = 0, wb = 0, wsum = 0;
+      for (const s of samples) {
+        const dx = x - s.x, dy = y - s.y;
+        const weight = 1 / (dx * dx + dy * dy + EPS);
+        wr += weight * s.color[0];
+        wg += weight * s.color[1];
+        wb += weight * s.color[2];
+        wsum += weight;
+      }
+      const expected = [wr / wsum, wg / wsum, wb / wsum];
 
       const idx = (y * width + x) * 4;
       const a = data[idx + 3] / 255;
@@ -430,6 +440,72 @@ export async function uploadAndReplaceImage(admin, productId, originalMediaId, e
   return newMedia.id;
 }
 
+// Back up the untouched original to the store's Files library (unattached to
+// any product) via fileCreate, so an edit can later be reverted. Best-effort:
+// returns null on any failure rather than throwing, since a backup that
+// couldn't be made should not block the edit itself — it just means that
+// edit won't be revertible.
+async function backupOriginal(admin, buffer) {
+  try {
+    const meta = await sharp(buffer).metadata();
+    const format = meta.format === "png" ? "png" : meta.format === "webp" ? "webp" : "jpg";
+    const mimeType = format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
+    const filename = `pixoraft-original-${Date.now()}.${format}`;
+
+    const stagedRes = await admin.graphql(
+      `#graphql
+        mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
+          stagedUploadsCreate(input: $input) {
+            stagedTargets { url resourceUrl parameters { name value } }
+            userErrors { field message }
+          }
+        }`,
+      {
+        variables: {
+          input: [{
+            filename,
+            mimeType,
+            httpMethod: "POST",
+            resource: "IMAGE",
+            fileSize: String(buffer.byteLength),
+          }],
+        },
+      }
+    );
+    const stagedData = await stagedRes.json();
+    const target = stagedData.data?.stagedUploadsCreate?.stagedTargets?.[0];
+    if (!target) return null;
+
+    const form = new FormData();
+    for (const param of target.parameters) form.append(param.name, param.value);
+    form.append("file", new Blob([buffer], { type: mimeType }), filename);
+    const uploadRes = await timedFetch(target.url, { method: "POST", body: form }, 40000);
+    if (!uploadRes.ok) return null;
+
+    // fileCreate (not productCreateMedia) — this intentionally does NOT attach
+    // to any product, so it sits in the Files library as a recovery copy only.
+    const fileRes = await admin.graphql(
+      `#graphql
+        mutation fileCreate($files: [FileCreateInput!]!) {
+          fileCreate(files: $files) {
+            files { id }
+            userErrors { field message }
+          }
+        }`,
+      {
+        variables: {
+          files: [{ contentType: "IMAGE", originalSource: target.resourceUrl }],
+        },
+      }
+    );
+    const fileData = await fileRes.json();
+    return fileData.data?.fileCreate?.files?.[0]?.id || null;
+  } catch (err) {
+    console.error("[STUDIO] original backup failed (non-fatal):", err?.message || err);
+    return null;
+  }
+}
+
 // The images on a product, in the merchant's order — what a run works through.
 export async function listProductImages(admin, productId) {
   const response = await admin.graphql(
@@ -517,6 +593,11 @@ export async function transformOneImage({ admin, productId, imageId, ops, shop, 
       return { success: false, imageId, error: "No edit was applicable to this image." };
     }
 
+    // Back up the pristine original BEFORE it's replaced, so the edit can be
+    // undone later from History. Runs before the replace call — once the
+    // replace happens the original is gone from Shopify for good.
+    const originalFileId = await backupOriginal(admin, buffer);
+
     const newImageId = await uploadAndReplaceImage(
       admin, productId, imageId, edited, node.image.altText
     );
@@ -533,6 +614,7 @@ export async function transformOneImage({ admin, productId, imageId, ops, shop, 
           imageId,
           newImageId,
           ops: JSON.stringify(edited.applied),
+          originalFileId,
         },
       });
     } catch (e) {
@@ -609,4 +691,100 @@ export async function restoreOrder(admin, productId, desiredOrder = []) {
     }
   }
   return true;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Revert — restore the backed-up original for one edit                      */
+/* -------------------------------------------------------------------------- */
+
+// Undo a single edit: re-attach the untouched original (backed up to Files at
+// edit time) to the product, remove the edited copy currently on it, and
+// clean up the backup file. The restored image lands at the end of the
+// product's media list rather than its original position — position isn't
+// recorded at edit time, so this is a deliberate simplification rather than a
+// bug: reorder it manually afterward if the position matters.
+export async function revertEdit({ admin, shop, editId }) {
+  const edit = await db.studioEdit.findUnique({ where: { id: editId } });
+  if (!edit || edit.shop !== shop) {
+    return { success: false, error: "That edit could not be found." };
+  }
+  if (edit.reverted) {
+    return { success: false, error: "That edit was already reverted." };
+  }
+  if (!edit.originalFileId) {
+    return { success: false, error: "No backup of the original is available for this edit." };
+  }
+
+  const fileRes = await admin.graphql(
+    `#graphql
+      query BackupFile($id: ID!) {
+        node(id: $id) { ... on MediaImage { image { url } } }
+      }`,
+    { variables: { id: edit.originalFileId } }
+  );
+  const fileData = await fileRes.json();
+  const originalUrl = fileData.data?.node?.image?.url;
+  if (!originalUrl) {
+    return {
+      success: false,
+      error: "The backed-up original is still processing — try again in a minute.",
+    };
+  }
+
+  try {
+    const mediaRes = await admin.graphql(
+      `#graphql
+        mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
+          productCreateMedia(productId: $productId, media: $media) {
+            media { ... on MediaImage { id } }
+            mediaUserErrors { field message }
+          }
+        }`,
+      {
+        variables: {
+          productId: edit.productId,
+          media: [{ mediaContentType: "IMAGE", originalSource: originalUrl }],
+        },
+      }
+    );
+    const mediaData = await mediaRes.json();
+    if (mediaData.data?.productCreateMedia?.mediaUserErrors?.length > 0) {
+      throw new Error(mediaData.data.productCreateMedia.mediaUserErrors[0].message);
+    }
+    const restored = mediaData.data?.productCreateMedia?.media?.[0];
+    if (!restored) throw new Error("Failed to re-attach the original image.");
+
+    await admin.graphql(
+      `#graphql
+        mutation productDeleteMedia($productId: ID!, $mediaIds: [ID!]!) {
+          productDeleteMedia(productId: $productId, mediaIds: $mediaIds) {
+            deletedMediaIds
+            mediaUserErrors { field message }
+          }
+        }`,
+      { variables: { productId: edit.productId, mediaIds: [edit.newImageId] } }
+    );
+
+    // Best-effort cleanup — a failed delete just leaves the backup file
+    // sitting in Files, which is harmless and not worth failing the revert.
+    try {
+      await admin.graphql(
+        `#graphql
+          mutation fileDelete($fileIds: [ID!]!) {
+            fileDelete(fileIds: $fileIds) { deletedFileIds userErrors { field message } }
+          }`,
+        { variables: { fileIds: [edit.originalFileId] } }
+      );
+    } catch (e) {
+      console.error("[STUDIO] backup file cleanup failed (non-fatal):", e?.message || e);
+    }
+
+    await db.studioEdit.update({ where: { id: editId }, data: { reverted: true } });
+
+    return { success: true, restoredImageId: restored.id };
+  } catch (err) {
+    const detail = err?.graphQLErrors?.[0]?.message || err?.message || "revert failed";
+    console.error(`[STUDIO] revert ${editId}:`, detail);
+    return { success: false, error: detail };
+  }
 }

@@ -59,15 +59,22 @@ model ShopSettings {
 // One row per image edit the studio performed — the source for the History
 // page and the per-product "edits" counts on the studio catalog. `ops` is a
 // JSON array of operation names (e.g. ["canvas","watermark"]).
+//
+// `originalFileId` is the Shopify File gid of the untouched original, backed
+// up to the store's Files library (unattached to any product) before the
+// edit replaced it — this is what makes an edit reversible. Null when the
+// backup upload failed; that edit just can't be reverted later.
 model StudioEdit {
-  id           String   @id @default(cuid())
-  shop         String
-  productId    String
-  productTitle String   @default("")
-  imageId      String
-  newImageId   String
-  ops          String
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  shop           String
+  productId      String
+  productTitle   String   @default("")
+  imageId        String
+  newImageId     String
+  ops            String
+  originalFileId String?
+  reverted       Boolean  @default(false)
+  createdAt      DateTime @default(now())
 
   @@index([shop, createdAt])
   @@index([shop, productId])

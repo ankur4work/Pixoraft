@@ -1,4 +1,5 @@
-import { useLoaderData, useNavigate } from 'react-router';
+import { useState } from 'react';
+import { useLoaderData, useNavigate, useFetcher } from 'react-router';
 import { boundary } from '@shopify/shopify-app-react-router/server';
 import RouteError from '../components/RouteError';
 import { authenticate } from '../shopify.server';
@@ -15,6 +16,7 @@ import {
   BlockStack,
   Divider,
   EmptyState,
+  Banner,
 } from '@shopify/polaris';
 
 /* -------------------------------------------------------------------------- */
@@ -72,9 +74,12 @@ export async function loader({ request }) {
       try { ops = JSON.parse(row.ops); } catch { /* shown without op chips */ }
       return {
         id: row.id,
+        productId: row.productId,
         productTitle: row.productTitle || 'Product',
         ops,
         createdAt: row.createdAt,
+        reverted: row.reverted,
+        canRevert: Boolean(row.originalFileId) && !row.reverted,
       };
     }),
   };
@@ -88,6 +93,51 @@ const fmtDate = (d) =>
   new Date(d).toLocaleString(undefined, {
     month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   });
+
+// Its own fetcher so one row's revert doesn't block or get confused with
+// another's — each has independent loading/error state.
+function EditRow({ edit, isFirst }) {
+  const fetcher = useFetcher();
+  const [dismissed, setDismissed] = useState(false);
+  const busy = fetcher.state !== 'idle';
+  const error = !dismissed ? fetcher.data?.error : null;
+
+  const handleRevert = () => {
+    setDismissed(false);
+    fetcher.submit(
+      { intent: 'revert', editId: edit.id },
+      { method: 'post', action: '/api/transform' }
+    );
+  };
+
+  return (
+    <BlockStack gap="300">
+      {!isFirst && <Divider />}
+      <InlineStack align="space-between" blockAlign="center" wrap>
+        <InlineStack gap="300" blockAlign="center" wrap>
+          <Text as="span" variant="bodyMd" fontWeight="semibold">{edit.productTitle}</Text>
+          <InlineStack gap="100">
+            {edit.ops.map((op) => (
+              <Badge key={op} tone="info">{OP_LABELS[op] || op}</Badge>
+            ))}
+            {edit.reverted && <Badge tone="attention">Reverted</Badge>}
+          </InlineStack>
+        </InlineStack>
+        <InlineStack gap="300" blockAlign="center">
+          <Text as="span" variant="bodySm" tone="subdued">{fmtDate(edit.createdAt)}</Text>
+          {edit.canRevert && (
+            <Button size="slim" loading={busy} onClick={handleRevert}>
+              Revert to original
+            </Button>
+          )}
+        </InlineStack>
+      </InlineStack>
+      {error && (
+        <Banner tone="critical" onDismiss={() => setDismissed(true)}>{error}</Banner>
+      )}
+    </BlockStack>
+  );
+}
 
 export default function HistoryPage() {
   const { totalEdits, monthEdits, recentProducts, opCounts, edits } = useLoaderData();
@@ -163,20 +213,7 @@ export default function HistoryPage() {
             ) : (
               <BlockStack gap="300">
                 {edits.map((edit, i) => (
-                  <BlockStack key={edit.id} gap="300">
-                    {i > 0 && <Divider />}
-                    <InlineStack align="space-between" blockAlign="center" wrap>
-                      <InlineStack gap="300" blockAlign="center" wrap>
-                        <Text as="span" variant="bodyMd" fontWeight="semibold">{edit.productTitle}</Text>
-                        <InlineStack gap="100">
-                          {edit.ops.map((op) => (
-                            <Badge key={op} tone="info">{OP_LABELS[op] || op}</Badge>
-                          ))}
-                        </InlineStack>
-                      </InlineStack>
-                      <Text as="span" variant="bodySm" tone="subdued">{fmtDate(edit.createdAt)}</Text>
-                    </InlineStack>
-                  </BlockStack>
+                  <EditRow key={edit.id} edit={edit} isFirst={i === 0} />
                 ))}
               </BlockStack>
             )}
