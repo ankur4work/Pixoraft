@@ -210,6 +210,18 @@ function toOpaqueRGB(data, width, height) {
 // in the photo. Assumes the backdrop reaches the image border, which is the
 // standard e-commerce studio-shot composition — a product cropped flush
 // against the frame edge is the one case this can't help.
+//
+// The one case flood fill alone still leaks on: a LOW-CONTRAST product on a
+// similarly dark/muted backdrop (a black leather bag on a near-black
+// background) with a soft, blurred edge — a smartphone photo or a resized
+// JPEG softens that boundary over several pixels, and a dark product's own
+// internal texture varies by only a few units between neighbors, so once the
+// fill crosses the soft edge it can crawl across the entire product with no
+// single step ever exceeding tolerance. There's no per-pixel rule that fixes
+// this without real segmentation, so `whitenRaw` below adds a coarse backstop
+// instead: if the fill ends up claiming an implausible fraction of the whole
+// frame, that is treated as a leak and the op no-ops rather than risk wiping
+// the product, which is the failure that must never happen.
 function backgroundMask(rgb, width, height) {
   const n = width * height;
   const mask = new Uint8Array(n); // 1 = background
@@ -219,8 +231,11 @@ function backgroundMask(rgb, width, height) {
 
   // Per-step tolerance while crawling pixel-to-pixel — only has to absorb one
   // gradient step plus JPEG noise, not the backdrop's total light-to-dark
-  // range, so it can stay tight without breaking on a smooth vignette.
-  const STEP_TOLERANCE = 26;
+  // range, so it can stay tight without breaking on a smooth vignette. Kept
+  // tight specifically to make it harder to crawl through a blurred product
+  // edge (see the low-contrast note above) — the frame-fraction backstop in
+  // whitenRaw is still the thing that actually guarantees safety.
+  const STEP_TOLERANCE = 18;
 
   const colorAt = (idx) => {
     const o = idx * 3;
@@ -288,15 +303,30 @@ function featherMask(mask, width, height, radius) {
   return out;
 }
 
+// A genuine leak — the fill crawling across the whole product, not just the
+// backdrop — claims essentially the entire frame (measured at 100% on a
+// reproduction of the reported bag-on-dark-backdrop failure). A legitimate
+// small product shot with generous surrounding backdrop can still land
+// fairly high (measured at ~94% on a product occupying under 6% of the
+// frame) without anything having gone wrong. 97% sits between the two with
+// margin on both sides: it lets real small-product photos through while
+// still catching a near-total leak before it can touch the product.
+const MAX_BACKGROUND_FRACTION = 0.97;
+
 // Background cleanup on a raw RGBA buffer, in place: flatten transparency,
 // flood-fill the background from the frame border, then lift it to pure
 // white with a feathered edge so the product's boundary doesn't get a hard
-// cutout halo.
+// cutout halo. Returns false (data left untouched) if the fill's result
+// doesn't look like a real backdrop — see MAX_BACKGROUND_FRACTION above.
 function whitenRaw(data, width, height) {
   const rgb = toOpaqueRGB(data, width, height);
   const mask = backgroundMask(rgb, width, height);
-  const alpha = featherMask(mask, width, height, 2);
 
+  let backgroundCount = 0;
+  for (let i = 0; i < mask.length; i++) backgroundCount += mask[i];
+  if (backgroundCount / mask.length > MAX_BACKGROUND_FRACTION) return false;
+
+  const alpha = featherMask(mask, width, height, 2);
   for (let i = 0, p = 0; i < alpha.length; i++, p += 4) {
     const t = alpha[i];
     const o = i * 3;
@@ -305,6 +335,7 @@ function whitenRaw(data, width, height) {
     data[p + 2] = Math.round(rgb[o + 2] + (255 - rgb[o + 2]) * t);
     data[p + 3] = 255;
   }
+  return true;
 }
 
 // "W:H" → number, defaulting to square.
@@ -343,9 +374,11 @@ export async function applyOps(buffer, ops, settings) {
 
   let flattened = false;
   if (ops.whiten) {
-    whitenRaw(data, width, height);
-    flattened = true;
-    applied.push("whiten");
+    const didWhiten = whitenRaw(data, width, height);
+    if (didWhiten) {
+      flattened = true;
+      applied.push("whiten");
+    }
   }
 
   let img = sharp(data, { raw: { width, height, channels: 4 } });
