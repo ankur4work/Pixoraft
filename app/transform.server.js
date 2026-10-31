@@ -180,85 +180,130 @@ const colorDist = (a, b) => {
   return Math.sqrt(dr * dr + dg * dg + db * db);
 };
 
-// Average a small patch centered at (cx, cy) in a flattened (opaque) RGBA
-// buffer — one background color sample.
-function samplePatch(data, width, height, cx, cy, patch) {
-  const half = Math.floor(patch / 2);
-  let r = 0, g = 0, b = 0, n = 0;
-  for (let y = cy - half; y <= cy + half; y++) {
-    if (y < 0 || y >= height) continue;
-    for (let x = cx - half; x <= cx + half; x++) {
-      if (x < 0 || x >= width) continue;
-      const idx = (y * width + x) * 4;
-      r += data[idx]; g += data[idx + 1]; b += data[idx + 2]; n++;
-    }
+// Flatten transparency onto white and return a flat opaque RGB buffer —
+// one [r,g,b] triplet per pixel — for cheap indexed access in the passes
+// below (avoids repeating the alpha math per channel per pass).
+function toOpaqueRGB(data, width, height) {
+  const n = width * height;
+  const rgb = new Uint8ClampedArray(n * 3);
+  for (let i = 0, p = 0; i < n; i++, p += 4) {
+    const a = data[p + 3] / 255;
+    const o = i * 3;
+    rgb[o] = data[p] * a + 255 * (1 - a);
+    rgb[o + 1] = data[p + 1] * a + 255 * (1 - a);
+    rgb[o + 2] = data[p + 2] * a + 255 * (1 - a);
   }
-  return n > 0 ? [r / n, g / n, b / n] : [255, 255, 255];
+  return rgb;
 }
 
-// Background cleanup on a raw RGBA buffer, in place.
-//
-// A flat "lift pixels that are already near-white" rule does nothing on a
-// real studio shot, where the backdrop is routinely darkened toward the
-// edges by vignetting/shadow falloff rather than flat white — exactly the
-// kind of photo this op exists to clean up. There is no foreground/
-// background segmentation here (that needs a matting model this app doesn't
-// ship), so instead eight points around the border — the four corners plus
-// the four edge midpoints — are sampled as background references and
-// blended per-pixel by inverse-distance weighting. Plain bilinear-from-four-
-// corners underestimates how dark a radial vignette gets at the edge
-// midpoints (it only "sees" the two adjacent corners there); the extra four
-// samples fix that without needing to know the vignette's shape in advance.
-// Any pixel close to its locally-expected background color is lifted to
-// white, with a feathered falloff so the product's edge doesn't get a hard
-// cutout halo. This assumes a product centered against a backdrop that
-// reaches the border, which is the standard e-commerce studio-shot
-// composition.
-function whitenRaw(data, width, height) {
-  const patch = Math.max(4, Math.round(Math.min(width, height) * 0.03));
-  const mx = width - 1, my = height - 1;
-  const points = [
-    [0, 0], [Math.round(mx / 2), 0], [mx, 0],
-    [0, Math.round(my / 2)], [mx, Math.round(my / 2)],
-    [0, my], [Math.round(mx / 2), my], [mx, my],
-  ];
-  const samples = points.map(([x, y]) => ({
-    x, y, color: samplePatch(data, width, height, x, y, patch),
-  }));
+// Which pixels are "background": a border-seeded flood fill, not a global
+// color-distance check. A per-pixel "is this color close to SOME expected
+// background value" test — the first cut of this op — has no idea where the
+// product is: the moment any part of the product (a pale watch face, a
+// cream fabric, skin tone) lands within tolerance of the backdrop's color
+// ANYWHERE in the frame, it gets wiped to white too. A flood fill has no
+// such blind spot — a pixel only ever joins the background region by being
+// reached through an unbroken chain of small, local color steps starting at
+// the frame's edge, so it can cross a smooth lighting gradient but cannot
+// jump across the product's own boundary, where the color step is large
+// no matter how the product's palette compares to the backdrop's elsewhere
+// in the photo. Assumes the backdrop reaches the image border, which is the
+// standard e-commerce studio-shot composition — a product cropped flush
+// against the frame edge is the one case this can't help.
+function backgroundMask(rgb, width, height) {
+  const n = width * height;
+  const mask = new Uint8Array(n); // 1 = background
+  const visited = new Uint8Array(n);
+  const queue = new Int32Array(n);
+  let qHead = 0, qTail = 0;
 
-  const TOLERANCE = 42; // color distance within which a pixel counts as background
-  const FEATHER = 30; // extra distance over which the lift fades out smoothly
-  const EPS = 64; // keeps IDW weights finite exactly at a sample point
+  // Per-step tolerance while crawling pixel-to-pixel — only has to absorb one
+  // gradient step plus JPEG noise, not the backdrop's total light-to-dark
+  // range, so it can stay tight without breaking on a smooth vignette.
+  const STEP_TOLERANCE = 26;
+
+  const colorAt = (idx) => {
+    const o = idx * 3;
+    return [rgb[o], rgb[o + 1], rgb[o + 2]];
+  };
+
+  const seed = (idx) => {
+    if (visited[idx]) return;
+    visited[idx] = 1;
+    mask[idx] = 1;
+    queue[qTail++] = idx;
+  };
+  for (let x = 0; x < width; x++) { seed(x); seed((height - 1) * width + x); }
+  for (let y = 0; y < height; y++) { seed(y * width); seed(y * width + width - 1); }
+
+  while (qHead < qTail) {
+    const idx = queue[qHead++];
+    const x = idx % width, y = (idx / width) | 0;
+    const ref = colorAt(idx);
+
+    const tryNeighbor = (nx, ny) => {
+      const nIdx = ny * width + nx;
+      if (visited[nIdx]) return;
+      if (colorDist(colorAt(nIdx), ref) <= STEP_TOLERANCE) {
+        visited[nIdx] = 1;
+        mask[nIdx] = 1;
+        queue[qTail++] = nIdx;
+      } else {
+        visited[nIdx] = 1; // rejected once; revisiting from another neighbor
+      }                     // adds cost without changing the outcome here
+    };
+    if (x > 0) tryNeighbor(x - 1, y);
+    if (x < width - 1) tryNeighbor(x + 1, y);
+    if (y > 0) tryNeighbor(x, y - 1);
+    if (y < height - 1) tryNeighbor(x, y + 1);
+  }
+
+  return mask;
+}
+
+// Separable box blur of a 0/1 mask into a 0..1 alpha map — softens the flood
+// fill's pixel-stepped boundary into a smooth edge instead of a hard cutout.
+function featherMask(mask, width, height, radius) {
+  const tmp = new Float32Array(width * height);
+  const out = new Float32Array(width * height);
+  const win = radius * 2 + 1;
 
   for (let y = 0; y < height; y++) {
+    const row = y * width;
+    let sum = 0;
+    for (let i = -radius; i <= radius; i++) sum += mask[row + Math.min(width - 1, Math.max(0, i))];
     for (let x = 0; x < width; x++) {
-      let wr = 0, wg = 0, wb = 0, wsum = 0;
-      for (const s of samples) {
-        const dx = x - s.x, dy = y - s.y;
-        const weight = 1 / (dx * dx + dy * dy + EPS);
-        wr += weight * s.color[0];
-        wg += weight * s.color[1];
-        wb += weight * s.color[2];
-        wsum += weight;
-      }
-      const expected = [wr / wsum, wg / wsum, wb / wsum];
-
-      const idx = (y * width + x) * 4;
-      const a = data[idx + 3] / 255;
-      const r = data[idx] * a + 255 * (1 - a);
-      const g = data[idx + 1] * a + 255 * (1 - a);
-      const b = data[idx + 2] * a + 255 * (1 - a);
-
-      const dist = colorDist([r, g, b], expected);
-      let t = 0;
-      if (dist <= TOLERANCE) t = 1;
-      else if (dist <= TOLERANCE + FEATHER) t = 1 - (dist - TOLERANCE) / FEATHER;
-
-      data[idx] = Math.round(r + (255 - r) * t);
-      data[idx + 1] = Math.round(g + (255 - g) * t);
-      data[idx + 2] = Math.round(b + (255 - b) * t);
-      data[idx + 3] = 255;
+      tmp[row + x] = sum / win;
+      sum += mask[row + Math.min(width - 1, x + radius + 1)] - mask[row + Math.max(0, x - radius)];
     }
+  }
+  for (let x = 0; x < width; x++) {
+    let sum = 0;
+    for (let i = -radius; i <= radius; i++) sum += tmp[Math.min(height - 1, Math.max(0, i)) * width + x];
+    for (let y = 0; y < height; y++) {
+      out[y * width + x] = sum / win;
+      sum += tmp[Math.min(height - 1, y + radius + 1) * width + x] - tmp[Math.max(0, y - radius) * width + x];
+    }
+  }
+  return out;
+}
+
+// Background cleanup on a raw RGBA buffer, in place: flatten transparency,
+// flood-fill the background from the frame border, then lift it to pure
+// white with a feathered edge so the product's boundary doesn't get a hard
+// cutout halo.
+function whitenRaw(data, width, height) {
+  const rgb = toOpaqueRGB(data, width, height);
+  const mask = backgroundMask(rgb, width, height);
+  const alpha = featherMask(mask, width, height, 2);
+
+  for (let i = 0, p = 0; i < alpha.length; i++, p += 4) {
+    const t = alpha[i];
+    const o = i * 3;
+    data[p] = Math.round(rgb[o] + (255 - rgb[o]) * t);
+    data[p + 1] = Math.round(rgb[o + 1] + (255 - rgb[o + 1]) * t);
+    data[p + 2] = Math.round(rgb[o + 2] + (255 - rgb[o + 2]) * t);
+    data[p + 3] = 255;
   }
 }
 
