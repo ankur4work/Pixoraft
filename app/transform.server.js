@@ -303,15 +303,25 @@ function featherMask(mask, width, height, radius) {
   return out;
 }
 
-// A genuine leak — the fill crawling across the whole product, not just the
-// backdrop — claims essentially the entire frame (measured at 100% on a
-// reproduction of the reported bag-on-dark-backdrop failure). A legitimate
-// small product shot with generous surrounding backdrop can still land
-// fairly high (measured at ~94% on a product occupying under 6% of the
-// frame) without anything having gone wrong. 97% sits between the two with
-// margin on both sides: it lets real small-product photos through while
-// still catching a near-total leak before it can touch the product.
-const MAX_BACKGROUND_FRACTION = 0.97;
+// A full-frame leak (the fill crawling across the ENTIRE product) measures
+// at 100% on a reproduction of the reported bag-on-dark-backdrop failure.
+// A PARTIAL leak — the fill correctly stopping at a product's own high-
+// contrast logo/accent while still swallowing the rest of a similarly-toned
+// product (a cream garment on a white backdrop, reported separately)
+// measures ~96%, because the surviving logo keeps the fraction just under
+// what a looser cutoff would catch. No per-step color tolerance can close
+// this gap — a sufficiently soft/blurred product edge can be made to have an
+// arbitrarily small per-pixel color step, which defeats ANY local threshold
+// by construction — so the fraction backstop is the only lever that still
+// helps. Two ordinary product-photo compositions (a hand holding a watch, a
+// product with a contrasting rim) measured 85% and 86% and must still work;
+// 90% sits in the gap between those and the ~96% leak, catching both real
+// failures with margin while preserving normal photos. The deliberate cost:
+// a product that fills nearly the whole frame with only a thin backdrop
+// border (measured ~94% on a small-product/huge-backdrop case) now also
+// skips. That trade is intentional — a missed whitening opportunity is a
+// minor disappointment, a wiped-out product photo is not.
+const MAX_BACKGROUND_FRACTION = 0.90;
 
 // Background cleanup on a raw RGBA buffer, in place: flatten transparency,
 // flood-fill the background from the frame border, then lift it to pure
